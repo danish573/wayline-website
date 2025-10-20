@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME      = "Wayline-website"
+        IMAGE_NAME      = "wayline-website"
         DOCKER_HUB_USER = "dkhan573"
         EC2_HOST        = "13.201.39.245"   // Replace with EC2 public IP or DNS
         SSH_KEY         = "Mumbai"               // Jenkins credential ID for SSH key
@@ -53,7 +53,7 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
                                 docker rm -f wayline || true &&
                                 docker pull $DOCKER_HUB_USER/$IMAGE_NAME:latest &&
-                                docker run -d --name wayline -p 80:80 $DOCKER_HUB_USER/$IMAGE_NAME:latest
+                                docker run -d --name wayline-website -p 80:80 $DOCKER_HUB_USER/$IMAGE_NAME:latest
                             '
                         """
                     }
