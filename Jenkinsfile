@@ -51,7 +51,7 @@ pipeline {
                     sshagent(credentials: [SSH_KEY]) {
                         sh """
                             ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
-                                docker rm -f wayline || true &&
+                                docker rm -f wayline-website || true &&
                                 docker pull $DOCKER_HUB_USER/$IMAGE_NAME:latest &&
                                 docker run -d --name wayline-website -p 80:80 $DOCKER_HUB_USER/$IMAGE_NAME:latest
                             '
