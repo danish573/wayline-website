@@ -1,13 +1,7 @@
-output "Jenkins_server_public_ip" {
-  description = "Jenkins Server Public IP"
-  value = aws_instance.static_webapp.public_ip
+output "instance_id" {
+  value = aws_instance.wayline_server.id
 }
 
-output "jenkins_server_url" {
-  value = "https://${aws_instance.static_webapp.public_ip}:8080"
-}
-
-output "s3_website_url" {
-  description = "S3 Static Website URL"
-  value       = aws_s3_bucket_website_configuration.website.website_endpoint
+output "public_ip" {
+  value = aws_instance.wayline_server.public_ip
 }
