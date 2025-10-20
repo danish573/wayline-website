@@ -1,0 +1,21 @@
+# Corrected grafana-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment # Corrected for consistency
+metadata:
+  name: grafana
+  namespace: monitoring # Corrected from 'NameSpace'
+spec: # Corrected from 'specs'
+  replicas: 1
+  selector:
+    matchLabels: # Corrected from 'matchlbels'
+      app: grafana
+  template: # Correctly indented
+    metadata:
+      labels:
+        app: grafana
+    spec: # Corrected from 'specs'
+      containers:
+      - name: grafana
+        image: grafana/grafana
+        ports:
+        - containerPort: 3000 # Corrected from 'containers: 3000'

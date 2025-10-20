@@ -1,0 +1,11 @@
+# Corrected namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wayline-website
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring

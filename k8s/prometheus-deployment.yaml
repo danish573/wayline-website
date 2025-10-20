@@ -1,0 +1,43 @@
+# Corrected prometheus-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment # Corrected for consistency
+metadata:
+  name: prometheus
+  namespace: monitoring # Corrected from 'NameSpace'
+spec:
+  replicas: 1
+  selector:
+    matchLabels: # Corrected from 'matchlabels'
+      app: prometheus
+  template: # Correctly indented
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus/
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-config
+
+---
+apiVersion: v1
+kind: ConfigMap # Corrected for consistency
+metadata:
+  name: prometheus-config
+  namespace: monitoring # Corrected from 'NameSpace'
+data:
+  prometheus.yml: | # Changed to .yml for convention
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+        - role: pod

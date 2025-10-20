@@ -1,0 +1,19 @@
+global:
+  scrape_interval: "15s"
+  evaluation_interval: "15s"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'wayline_backend'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes__pod__label_app]
+        action: keep
+        regex: wayline-app;wayline-backend
+      - source_labels: [__meta_kubernetes_pod_ip]
+        target_label: __address__
+        replacement: ${1}:5000

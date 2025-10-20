@@ -1,0 +1,14 @@
+# Corrected grafana-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: monitoring # Corrected from 'NameSpace'
+spec: # Corrected from 'specs'
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30003 # Corrected from 'nodeport'
+  type: NodePort

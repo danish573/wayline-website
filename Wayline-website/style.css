@@ -1,0 +1,93 @@
+body {
+    margin: 0;
+    font-family: arial, sans-serif;
+    background-color: #fffaf0;
+    color: #333;
+}
+
+.header {
+    text-align: center;
+    padding: 20px;
+    border-bottom: 2px solid #f1c40f;
+    font-style: italic;
+    background-image: url("Images/logo.png");
+    background-position:center;
+    
+}
+
+.logo {
+    width: 200px;
+    vertical-align: middle;
+}
+
+.navbar {
+    display: flex;
+    justify-content: center;
+    background-color: #3eac4d88;
+
+}
+.navbar a{
+    color: black;
+    padding: 10px 20px;
+    text-decoration: underline;
+    font-size: large;
+    font-family: Verdana;
+    font-weight: bold;
+    display: inline-block;
+    transition: all 1s ease-in-out;
+}
+
+.navbar a:hover{
+    background-color: #695151;
+    color: white;
+    filter: blur(1.5px);
+}
+
+.hero {
+    height: 600px;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+
+}
+
+.overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: whitesmoke;
+    padding: 40px;
+    text-align: center;
+}
+
+.content {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.footer{
+    text-align: center;
+    padding: 10px;
+    bottom: 0px;
+    background-color: #f1c40f;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.card{
+    background: whitesmoke;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.card img {
+    width: 100%;
+    border-radius: 8px;
+}

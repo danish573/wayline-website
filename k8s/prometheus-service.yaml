@@ -1,0 +1,14 @@
+# Corrected prometheus-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: monitoring # Corrected from 'NameSpace'
+spec: # Corrected from 'specs'
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30002 # Corrected from 'NodePort'
+  type: NodePort

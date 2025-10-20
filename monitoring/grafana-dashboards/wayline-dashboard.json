@@ -1,0 +1,45 @@
+{
+    "dashboard":{
+        "id":null,
+        "title":"Wayline Backend Dashboard",
+        "timezone":"browser",
+        "panels":[
+            {
+                "type":"graph",
+                "title":"HTTP Request Rate",
+                "targets":[
+                    {
+                        "expr":"rate(http_request_total[1m])",
+                        "legendFormat":"request/sec"
+                    }
+                ],
+                "gridPos":{"x":0,"y":0, "w":12, "h":8}
+            },
+            {
+                "type":"graph",
+                "title":"Error Rate",
+                "targets":[
+                    {
+                        "expr":"rate(http_request_total{status=~\"5..\"}[1m])",
+                        "legendFormat":"error/sec"
+                    }
+                ],
+                "gridPos":{"x":12, "y":0, "w":12, "h":8}
+            },
+            {
+
+                "type":"graph",
+                "title":"Pod Memory Usage",
+                "targets":[
+                    {
+                     "expr":"container_memory_usage_bytes{pod=~\"wayline-backend.*\"}",
+                     "legendFormat":"{{pod}}"
+                    }
+                ],
+                "gridPos":{"x":12, "y":8, "w":12, "h":8}
+            }
+        ],
+        "schemaVersion": 36,
+        "version":1
+    }
+}
