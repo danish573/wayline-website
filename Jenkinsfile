@@ -2,114 +2,80 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME      = "wayline-website"
-        DOCKER_HUB_USER = "dkhan573"
-        EC2_HOST        = "13.201.39.245"   // Replace with your EC2 public IP or DNS
-        SSH_KEY         = "Mumbai"           // Jenkins credential ID for SSH key
-        USER            = "ubuntu"
-        TAG             = "${BUILD_NUMBER}"
-
-        # Kubernetes & monitoring directories
-        K8S_DIR         = "k8s"
-        MONITORING_DIR  = "monitoring"
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        DOCKER_IMAGE = 'danish573/wayline-website'
+        K8S_DIR = 'k8s'
+        MONITORING_DIR = 'monitoring'
+        EC2_HOST = '13.201.39.245'     // ✅ Replace with your EC2 public IP
+        SSH_KEY = 'Mumbai'             // ✅ Jenkins SSH Key Credential ID
+        USER = 'ubuntu'
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/danish573/STATIC-WEB-APP.git'
+                git branch: 'main', url: 'https://github.com/danish573/wayline-website.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh """
-                        echo "🏗️ Building Docker image..."
-                        docker build -t $IMAGE_NAME:$TAG .
-                        docker tag $IMAGE_NAME:$TAG $DOCKER_HUB_USER/$IMAGE_NAME:latest
-                        docker tag $IMAGE_NAME:$TAG $DOCKER_HUB_USER/$IMAGE_NAME:$TAG
-                    """
-                }
+                sh 'docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    echo "📦 Pushing Docker image to Docker Hub..."
-                    withDockerRegistry([credentialsId: 'dockerhub', url: 'https://index.docker.io/v1/']) {
-                        sh """
-                            docker push $DOCKER_HUB_USER/$IMAGE_NAME:latest
-                            docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest
+                        docker push $DOCKER_IMAGE:$BUILD_NUMBER
+                        docker push $DOCKER_IMAGE:latest
+                    '''
                 }
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Copy Files to EC2') {
             steps {
-                script {
-                    echo "🚀 Deploying container on EC2..."
-                    sshagent(credentials: [SSH_KEY]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
-                                docker rm -f wayline || true &&
-                                docker pull $DOCKER_HUB_USER/$IMAGE_NAME:latest &&
-                                docker run -d --name wayline -p 80:80 $DOCKER_HUB_USER/$IMAGE_NAME:latest
-                            '
-                        """
-                    }
+                sshagent (credentials: ["${SSH_KEY}"]) {
+                    sh '''
+                        scp -o StrictHostKeyChecking=no -r $K8S_DIR $MONITORING_DIR $USER@$EC2_HOST:/home/$USER/project/
+                    '''
                 }
             }
         }
 
-        stage('Verify Deployment') {
+        stage('Deploy to Kubernetes (K3s)') {
             steps {
-                echo "🌐 Website deployed successfully! Visit: http://$EC2_HOST"
-            }
-        }
-
-        // -------------------- New Stages for Kubernetes & Monitoring --------------------
-
-        stage('Deploy to Kubernetes Cluster') {
-            steps {
-                script {
-                    echo "🚀 Deploying Kubernetes manifests..."
-                    sshagent(credentials: [SSH_KEY]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
-                                kubectl apply -f ~/project/${K8S_DIR}/namespace.yaml ||
-                                kubectl create namespace wayline-monitoring;
-
-                                kubectl apply -f ~/project/${K8S_DIR}/deployment.yaml;
-                                kubectl apply -f ~/project/${K8S_DIR}/service.yaml;
-
-                                echo "✅ Application deployed on Kubernetes!"
-                            '
-                        """
-                    }
+                sshagent (credentials: ["${SSH_KEY}"]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
+                            kubectl apply -f /home/$USER/project/k8s/deployment.yaml
+                            kubectl apply -f /home/$USER/project/k8s/service.yaml
+                            kubectl get pods -o wide
+                            kubectl get svc -o wide
+                        '
+                    '''
                 }
             }
         }
 
-        stage('Setup Prometheus and Grafana') {
+        stage('Deploy Monitoring Stack (Prometheus + Grafana)') {
             steps {
-                script {
-                    echo "📊 Deploying Prometheus and Grafana..."
-                    sshagent(credentials: [SSH_KEY]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
-                                kubectl apply -f ~/project/${MONITORING_DIR}/prometheus-deployment.yaml;
-                                kubectl apply -f ~/project/${MONITORING_DIR}/prometheus-service.yaml;
-                                kubectl apply -f ~/project/${MONITORING_DIR}/grafana-deployment.yaml;
-                                kubectl apply -f ~/project/${MONITORING_DIR}/grafana-service.yaml;
-
-                                echo "✅ Prometheus & Grafana deployed successfully!"
-                            '
-                        """
-                    }
+                sshagent (credentials: ["${SSH_KEY}"]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
+                            kubectl apply -f /home/$USER/project/monitoring/prometheus-deployment.yaml
+                            kubectl apply -f /home/$USER/project/monitoring/prometheus-service.yaml
+                            kubectl apply -f /home/$USER/project/monitoring/grafana-deployment.yaml
+                            kubectl apply -f /home/$USER/project/monitoring/grafana-service.yaml
+                            kubectl get pods -n default
+                            kubectl get svc -n default
+                        '
+                    '''
                 }
             }
         }
@@ -117,10 +83,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ CI/CD Pipeline completed successfully!"
+            echo '✅ Deployment completed successfully!'
         }
         failure {
-            echo "❌ Pipeline failed. Please check the Jenkins console output."
+            echo '❌ Deployment failed. Check Jenkins logs for details.'
         }
     }
 }
