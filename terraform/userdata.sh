@@ -1,17 +1,21 @@
 #!/bin/bash
 # ===========================================================
-#  Wayline DevOps Full Setup Script
-#  Jenkins + Docker + Kubernetes + Prometheus + Grafana
+#  Wayline DevOps Auto Setup Script
+#  Jenkins + Docker + K3s + Prometheus + Grafana
 # ===========================================================
 
-# --- Update and Upgrade ---
-sudo apt update -y && sudo apt upgrade -y
+set -e
 
-# --- Install Basic Tools ---
+echo "🚀 Starting Wayline full-stack setup..."
+
+# ===========================================================
+# 1️⃣ Update and Install Basic Packages
+# ===========================================================
+sudo apt update -y && sudo apt upgrade -y
 sudo apt install -y curl wget git unzip apt-transport-https ca-certificates gnupg lsb-release
 
 # ===========================================================
-#  Install Java & Jenkins
+# 2️⃣ Install Java & Jenkins
 # ===========================================================
 sudo apt install -y openjdk-17-jdk
 java -version
@@ -29,7 +33,7 @@ sudo systemctl enable jenkins
 sudo systemctl start jenkins
 
 # ===========================================================
-#  Install Docker
+# 3️⃣ Install Docker
 # ===========================================================
 sudo apt install -y docker.io
 sudo systemctl enable docker
@@ -37,74 +41,68 @@ sudo systemctl start docker
 sudo usermod -aG docker ubuntu
 sudo usermod -aG docker jenkins
 newgrp docker
+docker --version
 
 # ===========================================================
-#  Install Kubernetes (kubectl + minikube)
+# 4️⃣ Install Lightweight Kubernetes (K3s)
 # ===========================================================
-# --- Install kubectl ---
-sudo curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s \
-https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
+echo "⚙️ Installing K3s (Lightweight Kubernetes)..."
+curl -sfL https://get.k3s.io | sh -
+sleep 60
 
-# --- Install Minikube ---
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-chmod +x minikube
-sudo mv minikube /usr/local/bin/
+# Setup kubectl config for ubuntu & Jenkins
+mkdir -p /home/ubuntu/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
+sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config
+sudo chmod 600 /home/ubuntu/.kube/config
 
-# --- Start Minikube with Docker driver ---
-sudo minikube start --driver=docker
+# For Jenkins
+sudo mkdir -p /var/lib/jenkins/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml /var/lib/jenkins/.kube/config
+sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
 
-# ===========================================================
-#  Install Prometheus
-# ===========================================================
-cd /opt
-sudo wget https://github.com/prometheus/prometheus/releases/download/v2.50.0/prometheus-2.50.0.linux-amd64.tar.gz
-sudo tar xvf prometheus-2.50.0.linux-amd64.tar.gz
-sudo mv prometheus-2.50.0.linux-amd64 prometheus
-cd prometheus
-
-# Create systemd service for Prometheus
-sudo bash -c 'cat <<EOF > /etc/systemd/system/prometheus.service
-[Unit]
-Description=Prometheus
-After=network.target
-
-[Service]
-ExecStart=/opt/prometheus/prometheus --config.file=/opt/prometheus/prometheus.yml --web.listen-address=0.0.0.0:9090
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-
-sudo systemctl daemon-reload
-sudo systemctl enable prometheus
-sudo systemctl start prometheus
+echo "✅ K3s Installed Successfully!"
+kubectl get nodes
 
 # ===========================================================
-#  Install Grafana
+# 5️⃣ Setup Monitoring Namespace
 # ===========================================================
-sudo apt install -y adduser libfontconfig1
-wget https://dl.grafana.com/oss/release/grafana_10.4.1_amd64.deb
-sudo dpkg -i grafana_10.4.1_amd64.deb
-sudo systemctl enable grafana-server
-sudo systemctl start grafana-server
-
-# ===========================================================
-#  Configure Kubernetes Deployments (Prometheus + Grafana)
-# ===========================================================
-cat <<EOF > /root/monitoring-namespace.yaml
+cat <<EOF > /home/ubuntu/monitoring-namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
 EOF
 
-kubectl apply -f /root/monitoring-namespace.yaml
+sudo kubectl apply -f /home/ubuntu/monitoring-namespace.yaml
 
-# Prometheus NodePort Service
-cat <<EOF > /root/prometheus-service.yaml
+# ===========================================================
+# 6️⃣ Deploy Prometheus & Grafana in K8s
+# ===========================================================
+cat <<EOF > /home/ubuntu/prometheus-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus
+        ports:
+        - containerPort: 9090
+EOF
+
+cat <<EOF > /home/ubuntu/prometheus-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -120,10 +118,30 @@ spec:
     app: prometheus
 EOF
 
-kubectl apply -f /root/prometheus-service.yaml
+cat <<EOF > /home/ubuntu/grafana-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana
+        ports:
+        - containerPort: 3000
+EOF
 
-# Grafana NodePort Service
-cat <<EOF > /root/grafana-service.yaml
+cat <<EOF > /home/ubuntu/grafana-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -139,27 +157,31 @@ spec:
     app: grafana
 EOF
 
-kubectl apply -f /root/grafana-service.yaml
+sudo kubectl apply -f /home/ubuntu/prometheus-deployment.yaml
+sudo kubectl apply -f /home/ubuntu/prometheus-service.yaml
+sudo kubectl apply -f /home/ubuntu/grafana-deployment.yaml
+sudo kubectl apply -f /home/ubuntu/grafana-service.yaml
 
 # ===========================================================
-#  Firewall Rules
+# 7️⃣ Firewall & Port Access
 # ===========================================================
 sudo ufw allow 22/tcp     # SSH
 sudo ufw allow 8080/tcp   # Jenkins
 sudo ufw allow 3000/tcp   # Grafana
 sudo ufw allow 9090/tcp   # Prometheus
-sudo ufw allow 80/tcp     # Web App
-sudo ufw reload
+sudo ufw allow 30000:32767/tcp
+sudo ufw --force enable
 
 # ===========================================================
-#  Jenkins Setup Notes
+# 8️⃣ Output Access Info
 # ===========================================================
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 echo "------------------------------------------------------"
-echo "✅ Jenkins:  http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8080"
-echo "✅ Prometheus: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):30090"
-echo "✅ Grafana: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):30300"
+echo "✅ Jenkins:    http://$PUBLIC_IP:8080"
+echo "✅ Prometheus: http://$PUBLIC_IP:30090"
+echo "✅ Grafana:    http://$PUBLIC_IP:30300"
 echo "------------------------------------------------------"
-
-# Print Jenkins password
 echo "🔑 Jenkins Initial Admin Password:"
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+echo "------------------------------------------------------"
+echo "✅ Setup Completed Successfully!"
