@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
-        DOCKER_IMAGE = 'danish573/wayline-website'
+        DOCKER_IMAGE = 'dkhan573/wayline-website'
         K8S_DIR = 'k8s'
         MONITORING_DIR = 'monitoring'
         EC2_HOST = '65.0.169.106'     // ✅ Replace with your EC2 public IP
