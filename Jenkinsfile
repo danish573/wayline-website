@@ -7,7 +7,7 @@ pipeline {
         K8S_DIR = 'k8s'
         MONITORING_DIR = 'monitoring'
         EC2_HOST = '65.0.169.106'     // ✅ Replace with your EC2 public IP
-        SSH_KEY = 'Mumbai'             // ✅ Jenkins SSH Key Credential ID
+        SSH_KEY = 'Mumbai'            // ✅ Jenkins SSH Key Credential ID
         USER = 'ubuntu'
     }
 
@@ -42,7 +42,14 @@ pipeline {
             steps {
                 sshagent (credentials: ["${SSH_KEY}"]) {
                     sh '''
+                        # ✅ Create target directory if missing
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST "mkdir -p /home/$USER/project"
+                        
+                        # ✅ Copy K8s & Monitoring files
                         scp -o StrictHostKeyChecking=no -r $K8S_DIR $MONITORING_DIR $USER@$EC2_HOST:/home/$USER/project/
+                        
+                        # ✅ Verify files copied
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST "ls -l /home/$USER/project"
                     '''
                 }
             }
@@ -52,12 +59,12 @@ pipeline {
             steps {
                 sshagent (credentials: ["${SSH_KEY}"]) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST "
                             kubectl apply -f /home/$USER/project/k8s/deployment.yaml
                             kubectl apply -f /home/$USER/project/k8s/service.yaml
                             kubectl get pods -o wide
                             kubectl get svc -o wide
-                        '
+                        "
                     '''
                 }
             }
@@ -67,14 +74,14 @@ pipeline {
             steps {
                 sshagent (credentials: ["${SSH_KEY}"]) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST '
+                        ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST "
                             kubectl apply -f /home/$USER/project/monitoring/prometheus-deployment.yaml
                             kubectl apply -f /home/$USER/project/monitoring/prometheus-service.yaml
                             kubectl apply -f /home/$USER/project/monitoring/grafana-deployment.yaml
                             kubectl apply -f /home/$USER/project/monitoring/grafana-service.yaml
                             kubectl get pods -n default
                             kubectl get svc -n default
-                        '
+                        "
                     '''
                 }
             }
