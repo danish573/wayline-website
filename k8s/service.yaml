@@ -1,14 +1,13 @@
-# Corrected service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: wayline-service
-  namespace: wayline-website # Corrected from 'NameSpace'
+  namespace: wayline-website
 spec:
   type: NodePort
   selector:
     app: wayline
   ports:
-  - port: 5000
-    targetPort: 5000
-    nodePort: 30001 # Corrected from 'NodePort'
+  - port: 80
+    targetPort: 80
+    nodePort: 30001
