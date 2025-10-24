@@ -6,7 +6,7 @@ pipeline {
         DOCKER_IMAGE = 'danish573/wayline-website'
         K8S_DIR = 'k8s'
         MONITORING_DIR = 'monitoring'
-        EC2_HOST = '13.201.39.245'     // ✅ Replace with your EC2 public IP
+        EC2_HOST = '65.0.169.106'     // ✅ Replace with your EC2 public IP
         SSH_KEY = 'Mumbai'             // ✅ Jenkins SSH Key Credential ID
         USER = 'ubuntu'
     }
