@@ -14,6 +14,16 @@ sudo apt update -y && sudo apt upgrade -y
 sudo apt install -y curl wget git unzip apt-transport-https ca-certificates gnupg lsb-release ufw
 
 # ===========================================================
+# 3️⃣ Install Docker
+# ===========================================================
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+sudo chmod 666 /var/run/docker.sock
+sudo usermod -aG docker ubuntu
+newgrp docker
+docker --version
+
+# ===========================================================
 # 2️⃣ Install Java & Jenkins
 # ===========================================================
 sudo apt install -y openjdk-17-jdk
@@ -29,16 +39,9 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
 sudo apt update -y
 sudo apt install -y jenkins
 sudo systemctl enable --now jenkins
-
-# ===========================================================
-# 3️⃣ Install Docker
-# ===========================================================
-sudo apt install -y docker.io
-sudo systemctl enable --now docker
-sudo usermod -aG docker ubuntu
 sudo usermod -aG docker jenkins
-newgrp docker
-docker --version
+sudo systemctl restart jenkins
+
 
 # ===========================================================
 # 4️⃣ Install K3s & Configure kubectl
