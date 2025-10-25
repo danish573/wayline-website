@@ -56,11 +56,13 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes (K3s)') {
+         stage('Deploy to Kubernetes (K3s)') {
             steps {
                 sshagent (credentials: ["${SSH_KEY}"]) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no $USER@$EC2_HOST "
+                            export KUBECONFIG=/home/$USER/.kube/config
+                            kubectl apply -f /home/$USER/project/k8s/namespace.yaml
                             kubectl apply -f /home/$USER/project/k8s/deployment.yaml
                             kubectl apply -f /home/$USER/project/k8s/service.yaml
                             kubectl get pods -o wide
@@ -70,7 +72,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy Monitoring Stack (Prometheus + Grafana)') {
             steps {
                 sshagent (credentials: ["${SSH_KEY}"]) {
