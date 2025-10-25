@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
         DOCKER_IMAGE = 'dkhan573/wayline-website'
         K8S_DIR = 'k8s'
